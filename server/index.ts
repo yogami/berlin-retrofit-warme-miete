@@ -23,12 +23,13 @@ async function ensureTables() {
                 "created_at" timestamp DEFAULT now() NOT NULL
             );
         `);
+        await client.query(`DROP TABLE IF EXISTS "audit_logs";`);
         await client.query(`
-            CREATE TABLE IF NOT EXISTS "audit_logs" (
+            CREATE TABLE "audit_logs" (
                 "id" serial PRIMARY KEY NOT NULL,
                 "simulation_id" integer NOT NULL,
-                "version_hash" text NOT NULL,
                 "hash" text NOT NULL,
+                "payload" jsonb NOT NULL,
                 "created_at" timestamp DEFAULT now() NOT NULL
             );
         `);
