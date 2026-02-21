@@ -6,6 +6,7 @@ import StakeholderIncentives from './StakeholderIncentives';
 import SavedScenarios from './SavedScenarios';
 import { GeospatialDashboard } from './GeospatialDashboard';
 import { ValuePerEntityTable } from './ValuePerEntityTable';
+import { SelectedBuildingCard } from './SelectedBuildingCard';
 import { Building2, Leaf, Zap, Loader2, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSimulation } from '../hooks/useSimulation';
@@ -111,6 +112,7 @@ function Dashboard() {
                                 </div>
                             ) : (
                                 <>
+                                    <SelectedBuildingCard params={params} />
                                     <ValuePerEntityTable data={data} units={params.units} />
 
                                     <div className="flex-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
