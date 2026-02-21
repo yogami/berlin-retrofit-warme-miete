@@ -24,31 +24,29 @@ export interface SimulationResult {
     newRent: number;
 }
 
+interface RetrofitStrategy {
+    costPerUnit: number;
+    heatingReduction: number;
+    rentIncreaseMulti: number;
+    subsidyPercent: number;
+}
+
+const StrategyMap: Record<string, RetrofitStrategy> = {
+    'basic': { costPerUnit: 15000, heatingReduction: 0.2, rentIncreaseMulti: 0.02, subsidyPercent: 0.15 },
+    'standard': { costPerUnit: 30000, heatingReduction: 0.45, rentIncreaseMulti: 0.05, subsidyPercent: 0.25 },
+    'deep': { costPerUnit: 50000, heatingReduction: 0.70, rentIncreaseMulti: 0.08, subsidyPercent: 0.50 }
+};
+
 export class SimulatorEngine {
     simulate(params: SimulationParams): SimulationResult {
         const { units, retrofitType, baseRentPerUnit, heatingPerUnit } = params;
 
-        let costPerUnit = 0;
-        let heatingReduction = 0;
-        let rentIncreaseMulti = 0;
-        let subsidyPercent = 0;
-
-        if (retrofitType === 'basic') {
-            costPerUnit = 15000;
-            heatingReduction = 0.2;
-            rentIncreaseMulti = 0.02;
-            subsidyPercent = 0.15; // BAFA
-        } else if (retrofitType === 'standard') {
-            costPerUnit = 30000;
-            heatingReduction = 0.45;
-            rentIncreaseMulti = 0.05;
-            subsidyPercent = 0.25;
-        } else { // deep
-            costPerUnit = 50000;
-            heatingReduction = 0.70;
-            rentIncreaseMulti = 0.08;
-            subsidyPercent = 0.50; // KfW 261 max + bonuses
+        const strategy = StrategyMap[retrofitType];
+        if (!strategy) {
+            throw new Error(`Invalid retrofit type: ${retrofitType}`);
         }
+
+        const { costPerUnit, heatingReduction, rentIncreaseMulti, subsidyPercent } = strategy;
 
         const totalCost = costPerUnit * units;
         const totalSubsidy = totalCost * subsidyPercent;

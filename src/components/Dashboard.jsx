@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import SimulatorControls from './SimulatorControls';
 import MetricsDisplay from './MetricsDisplay';
 import ImpactCharts from './ImpactCharts';
 import { Building2, Leaf, Zap, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSimulation } from '../hooks/useSimulation';
 
 function Dashboard() {
     const [params, setParams] = useState({
@@ -14,31 +15,7 @@ function Dashboard() {
         heatingPerUnit: 2400, // annual baseline heating
     });
 
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let isMounted = true;
-        setLoading(true);
-
-        fetch('/api/simulate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(params)
-        })
-            .then(res => res.json())
-            .then(result => {
-                if (isMounted && result.success) {
-                    setData(result.data);
-                }
-            })
-            .catch(err => console.error('Sim Error:', err))
-            .finally(() => {
-                if (isMounted) setLoading(false);
-            });
-
-        return () => { isMounted = false; };
-    }, [params]);
+    const { data, loading, error } = useSimulation(params);
 
     return (
         <div className="flex-col gap-8" style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
