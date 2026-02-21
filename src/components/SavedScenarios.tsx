@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Database, ArrowRight, Loader2, Trash2 } from 'lucide-react';
-import { SimulationResult } from '../../../server/domain/SimulatorEngine';
+import { Database, ArrowRight, Loader2, Trash2, ShieldCheck, Download, Send, PenTool } from 'lucide-react';
+import { SimulationResult } from '../../server/domain/SimulatorEngine';
+import { DealCloserModal } from './DealCloserModal';
 
 interface SavedSimulation {
     id: number;
@@ -10,11 +11,14 @@ interface SavedSimulation {
     retrofitType: string;
     results: SimulationResult;
     createdAt: string;
+    hash?: string;
 }
 
 export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => void }) {
     const [scenarios, setScenarios] = useState<SavedSimulation[]>([]);
     const [loading, setLoading] = useState(true);
+    const [dispatchStatus, setDispatchStatus] = useState<Record<number, string>>({});
+    const [activeContractSimulation, setActiveContractSimulation] = useState<SavedSimulation | null>(null);
 
     const fetchScenarios = () => {
         setLoading(true);
@@ -53,6 +57,34 @@ export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => voi
             }
         } catch (err) {
             console.error("Failed to delete", err);
+        }
+    };
+
+    const handleExport = (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        window.open(`/api/reports/compliance/${id}`, '_blank');
+    };
+
+    const handleDispatch = async (e: React.MouseEvent, s: SavedSimulation, type: 'finance' | 'execute') => {
+        e.stopPropagation();
+        setDispatchStatus(prev => ({ ...prev, [s.id]: 'routing...' }));
+
+        try {
+            const res = await fetch(`/api/marketplace/${type}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ simulationId: s.id, hash: s.hash })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setDispatchStatus(prev => ({ ...prev, [s.id]: `Sent to ${data.partner}` }));
+                setTimeout(() => setDispatchStatus(prev => ({ ...prev, [s.id]: '' })), 3000);
+            } else {
+                setDispatchStatus(prev => ({ ...prev, [s.id]: 'Failed' }));
+            }
+        } catch (err) {
+            setDispatchStatus(prev => ({ ...prev, [s.id]: 'Error' }));
         }
     };
 
@@ -108,8 +140,64 @@ export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => voi
                             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                 {s.retrofitType.toUpperCase()} Retrofit • Saved {new Date(s.createdAt).toLocaleDateString()}
                             </span>
+                            {s.hash && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--accent-blue)', fontSize: '0.75rem' }}>
+                                        <ShieldCheck size={14} />
+                                        <span>Verified Proof-of-Execution</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            onClick={(e) => handleDispatch(e, s, 'finance')}
+                                            disabled={!!dispatchStatus[s.id]}
+                                            className="btn-primary"
+                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                        >
+                                            <Send size={12} /> DKB Loan
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDispatch(e, s, 'execute')}
+                                            disabled={!!dispatchStatus[s.id]}
+                                            className="btn-secondary"
+                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                        >
+                                            <Send size={12} /> Ecoworks Bid
+                                        </button>
+                                        {dispatchStatus[s.id] && <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)', alignSelf: 'center' }}>{dispatchStatus[s.id]}</span>}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <button
+                                onClick={(e) => handleExport(e, s.id)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '0.5rem',
+                                    color: 'var(--accent-blue)'
+                                }}
+                                title="Export Compliance Audit"
+                            >
+                                <Download size={18} />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveContractSimulation(s);
+                                }}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '0.5rem',
+                                    color: 'var(--accent-green)'
+                                }}
+                                title="Draft Green Lease"
+                            >
+                                <PenTool size={18} />
+                            </button>
                             <button
                                 onClick={(e) => handleDelete(e, s.id)}
                                 style={{
@@ -128,6 +216,16 @@ export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => voi
                     </motion.div>
                 ))}
             </div>
+
+            {activeContractSimulation && (
+                <DealCloserModal
+                    isOpen={!!activeContractSimulation}
+                    onClose={() => setActiveContractSimulation(null)}
+                    simulationId={activeContractSimulation.id}
+                    tenantNetSavings={activeContractSimulation.results.tenantNetSavings}
+                    landlordRoi={activeContractSimulation.results.roiYears}
+                />
+            )}
         </div>
     );
 }

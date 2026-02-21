@@ -8,3 +8,11 @@ export const simulations = pgTable('simulations', {
     results: jsonb('results').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const auditLogs = pgTable('audit_logs', {
+    id: serial('id').primaryKey(),
+    simulationId: integer('simulation_id').notNull().references(() => simulations.id, { onDelete: 'cascade' }),
+    hash: text('hash').notNull(),
+    payload: jsonb('payload').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});

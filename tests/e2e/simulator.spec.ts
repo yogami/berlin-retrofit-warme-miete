@@ -47,7 +47,7 @@ test.describe('Warme Miete Dashboard Flow (ATDD)', () => {
                     status: 200,
                     json: {
                         success: true,
-                        data: [{ id: 999, units: 20, buildingAge: '1970', retrofitType: 'deep', createdAt: new Date().toISOString() }]
+                        data: [{ id: 999, units: 20, buildingAge: '1970', retrofitType: 'deep', createdAt: new Date().toISOString(), hash: 'mock-abc-123-hash' }]
                     }
                 });
             } else {
@@ -61,6 +61,19 @@ test.describe('Warme Miete Dashboard Flow (ATDD)', () => {
         // Verify it appears in the Saved Scenarios list
         await expect(page.locator('h2', { hasText: 'Saved Scenarios' })).toBeVisible({ timeout: 10000 });
         await expect(page.locator('strong', { hasText: '20-Unit 1970 Altbau' })).toBeVisible({ timeout: 10000 });
+
+        // Verify the Cryptographic Badge appears
+        await expect(page.locator('text=Verified Proof-of-Execution')).toBeVisible();
+
+        // PARTNER MARKETPLACE DISTRIBUTION
+        await page.route('**/api/marketplace/finance', async route => {
+            await route.fulfill({ status: 200, json: { success: true, partner: 'KfW/DKB API' } });
+        });
+
+        const financePromise = page.waitForResponse(response => response.url().includes('/api/marketplace/finance') && response.request().method() === 'POST');
+        await page.locator('button', { hasText: 'DKB Loan' }).click();
+        await financePromise;
+        await expect(page.locator('text=Sent to KfW/DKB API')).toBeVisible();
 
         // Mock the DELETE request
         await page.route('**/api/simulations/999', async route => {
