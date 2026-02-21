@@ -26,7 +26,7 @@ export const createApp = (databaseUrl?: string) => {
     // Serve static frontend files in production
     app.use(express.static(path.join(process.cwd(), 'dist')));
 
-    app.get('*', (req, res) => {
+    app.get('/(.*)', (req, res) => {
         res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
     });
 
