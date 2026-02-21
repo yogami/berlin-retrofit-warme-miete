@@ -3,8 +3,8 @@ import SimulatorControls from './SimulatorControls';
 import MetricsDisplay from './MetricsDisplay';
 import ImpactCharts from './ImpactCharts';
 import StakeholderIncentives from './StakeholderIncentives';
-import DemoBuildings from './DemoBuildings';
-import { Building2, Leaf, Zap, Loader2 } from 'lucide-react';
+import SavedScenarios from './SavedScenarios';
+import { Building2, Leaf, Zap, Loader2, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSimulation } from '../hooks/useSimulation';
 
@@ -39,16 +39,38 @@ function Dashboard() {
             </motion.header>
 
             {/* Main Grid */}
-            <div className="dashboard-grid" style={{ padding: 0 }}>
-                {/* Left Column: Charts & Metrics */}
-                <div className="flex-col gap-6">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem' }}>
+                {/* Left Column: Visuals & Data */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                     {loading || !data ? (
                         <div className="glass-panel p-6 flex-row" style={{ justifyContent: 'center', minHeight: '300px' }}>
                             <Loader2 className="animate-spin" size={48} color="var(--accent-green)" />
                         </div>
                     ) : (
                         <>
-                            <MetricsDisplay data={data} units={params.units} />
+                            <div className="flex-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div className="glass-panel p-6" style={{ flex: 1 }}>
+                                    <MetricsDisplay data={data} units={params.units} />
+                                </div>
+                                <button
+                                    className="btn-primary"
+                                    style={{ padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', height: 'fit-content', marginLeft: '1rem' }}
+                                    onClick={() => {
+                                        fetch('/api/simulations', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ name: 'Hackathon Demo Model', params, results: data })
+                                        }).then(res => {
+                                            if (res.ok) {
+                                                alert("Scenario saved to live Database!");
+                                                window.dispatchEvent(new Event('scenario-saved'));
+                                            }
+                                        });
+                                    }}
+                                >
+                                    <Save size={18} /> Save & Broadcast Scenario
+                                </button>
+                            </div>
 
                             <div className="glass-panel p-6">
                                 <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Warm Rent Impact (Per Unit / Year)</h2>
@@ -68,7 +90,7 @@ function Dashboard() {
                         <SimulatorControls params={params} setParams={setParams} />
                     </div>
 
-                    <DemoBuildings onSelect={(p) => setParams(p)} />
+                    <SavedScenarios onSelect={(p) => setParams(p)} />
                 </div>
             </div>
 

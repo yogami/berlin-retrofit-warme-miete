@@ -13,22 +13,10 @@ export const createApiRouter = (db: any) => {
             // 1. Run Domain Logic
             const result = engine.simulate(params);
 
-            // 2. Persist to Infrastructure (if DB connected)
-            let savedId = null;
-            if (db) {
-                const inserted = await db.insert(simulations).values({
-                    units: params.units,
-                    buildingAge: params.buildingAge,
-                    retrofitType: params.retrofitType,
-                    results: result,
-                }).returning({ id: simulations.id });
-                savedId = inserted[0].id;
-            }
-
             res.status(200).json({
                 success: true,
                 data: result,
-                id: savedId
+                id: null
             });
         } catch (error: any) {
             res.status(500).json({ success: false, error: error.message });
