@@ -3,6 +3,7 @@ import SimulatorControls from './SimulatorControls';
 import MetricsDisplay from './MetricsDisplay';
 import ImpactCharts from './ImpactCharts';
 import StakeholderIncentives from './StakeholderIncentives';
+import DemoBuildings from './DemoBuildings';
 import { Building2, Leaf, Zap, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSimulation } from '../hooks/useSimulation';
@@ -58,12 +59,16 @@ function Dashboard() {
                 </div>
 
                 {/* Right Column: Controls */}
-                <div className="glass-panel p-6 flex-col gap-6" style={{ height: 'fit-content' }}>
-                    <div className="flex-row gap-2" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem' }}>
-                        <Zap color="var(--accent-blue)" />
-                        <h2>Scenario Controls</h2>
+                <div className="flex-col gap-6" style={{ height: 'fit-content' }}>
+                    <div className="glass-panel p-6">
+                        <div className="flex-row gap-2" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+                            <Zap color="var(--accent-blue)" />
+                            <h2 style={{ fontSize: '1.25rem' }}>Scenario Controls</h2>
+                        </div>
+                        <SimulatorControls params={params} setParams={setParams} />
                     </div>
-                    <SimulatorControls params={params} setParams={setParams} />
+
+                    <DemoBuildings onSelect={(p) => setParams(p)} />
                 </div>
             </div>
 
