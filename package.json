@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:server": "tsx server/index.ts",
     "dev:all": "npm run dev:server & npm run dev",
-    "build": "vite build",
+    "build": "drizzle-kit push && vite build",
     "start": "tsx server/index.ts",
     "lint": "eslint .",
     "preview": "vite preview"
