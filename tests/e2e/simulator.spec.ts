@@ -7,8 +7,9 @@ test.describe('Warme Miete Enterprise Trust Flow (ATDD)', () => {
         // Run against the local dev server or the production URL provided by Playwright config
         await page.goto('/');
 
-        // 1. Verify Core Load
+        // 1. Verify Core Load and enter Deal Maker
         await expect(page.locator('h1')).toContainText('Warme Miete');
+        await page.locator('button', { hasText: 'Deal Maker' }).click();
         await expect(page.locator('text=Number of Units')).toBeVisible();
 
         // 2. Trigger Simulation

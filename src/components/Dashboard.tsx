@@ -7,6 +7,7 @@ import SavedScenarios from './SavedScenarios';
 import { GeospatialDashboard } from './GeospatialDashboard';
 import { ValuePerEntityTable } from './ValuePerEntityTable';
 import { SelectedBuildingCard } from './SelectedBuildingCard';
+import { FundingMatcher } from './FundingMatcher';
 import { Building2, Leaf, Zap, Loader2, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSimulation } from '../hooks/useSimulation';
@@ -143,6 +144,7 @@ function Dashboard() {
                                         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.5rem' }}>Warm Rent Impact (Per Unit / Year)</h2>
                                         <ImpactCharts data={data} />
                                     </div>
+                                    <FundingMatcher data={data} params={params} />
                                 </>
                             )}
                         </div>
