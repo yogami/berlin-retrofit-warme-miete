@@ -2,28 +2,24 @@ import React, { useState } from "react";
 import { FileText, X, Download, ShieldCheck } from "lucide-react";
 
 interface DealCloserModalProps {
-  isOpen: boolean;
+  simulation: any;
   onClose: () => void;
-  simulationId: number;
-  tenantNetSavings: number;
-  landlordRoi: number;
+  prefillAddress?: string;
 }
 
 export const DealCloserModal: React.FC<DealCloserModalProps> = ({
-  isOpen,
+  simulation,
   onClose,
-  simulationId,
-  tenantNetSavings,
-  landlordRoi,
+  prefillAddress,
 }) => {
   const [formData, setFormData] = useState({
-    buildingAddress: "",
+    buildingAddress: prefillAddress || "",
     landlordName: "",
     tenantName: "",
   });
   const [isGenerating, setIsGenerating] = useState(false);
 
-  if (!isOpen) return null;
+  if (!simulation) return null;
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +30,8 @@ export const DealCloserModal: React.FC<DealCloserModalProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          simulationId,
+          simulationId: simulation.id,
+          ephemeralResults: simulation.results,
           ...formData,
         }),
       });
@@ -46,7 +43,7 @@ export const DealCloserModal: React.FC<DealCloserModalProps> = ({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `GreenLease_${simulationId}.pdf`;
+      a.download = `GreenLease_${simulation.id}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -92,13 +89,13 @@ export const DealCloserModal: React.FC<DealCloserModalProps> = ({
           <div className="flex justify-between items-center mb-2">
             <span className="text-gray-400 text-sm">Tenant Net Savings:</span>
             <span className="text-green-400 font-bold">
-              €{tenantNetSavings.toFixed(0)}/yr
+              €{simulation.results?.tenantNetSavings?.toFixed(0) || 0}/yr
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400 text-sm">Landlord Target ROI:</span>
             <span className="text-blue-400 font-bold">
-              {landlordRoi.toFixed(1)} yrs
+              {simulation.results?.roiYears?.toFixed(1) || 0} yrs
             </span>
           </div>
         </div>

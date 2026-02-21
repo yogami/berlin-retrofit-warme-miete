@@ -1,0 +1,52 @@
+[
+    {
+        "id": "nk-001",
+        "address": "Karl-Marx-Straße 111, 12043 Berlin",
+        "lat": 52.4764,
+        "lon": 13.4385,
+        "era_proxy": "1960",
+        "mock_av_ratio": 1.2,
+        "units": 25,
+        "pv_kwp_mock": 15.5
+    },
+    {
+        "id": "nk-002",
+        "address": "Hermannstraße 20, 12049 Berlin",
+        "lat": 52.4791,
+        "lon": 13.4248,
+        "era_proxy": "1900",
+        "mock_av_ratio": 0.8,
+        "units": 40,
+        "pv_kwp_mock": 8.0
+    },
+    {
+        "id": "nk-003",
+        "address": "Sonnenallee 150, 12059 Berlin",
+        "lat": 52.4745,
+        "lon": 13.4471,
+        "era_proxy": "1980",
+        "mock_av_ratio": 1.8,
+        "units": 15,
+        "pv_kwp_mock": 22.0
+    },
+    {
+        "id": "nk-004",
+        "address": "Richardplatz 1, 12055 Berlin",
+        "lat": 52.4735,
+        "lon": 13.4429,
+        "era_proxy": "1890",
+        "mock_av_ratio": 0.5,
+        "units": 12,
+        "pv_kwp_mock": 4.5
+    },
+    {
+        "id": "nk-005",
+        "address": "Weserstraße 50, 12045 Berlin",
+        "lat": 52.4832,
+        "lon": 13.4357,
+        "era_proxy": "1920",
+        "mock_av_ratio": 0.9,
+        "units": 30,
+        "pv_kwp_mock": 12.0
+    }
+]

@@ -40,8 +40,8 @@ function ImpactCharts({ data }) {
     };
 
     return (
-        <div style={{ height: '350px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
+        <div style={{ height: '350px', minHeight: '350px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height={350}>
                 <BarChart
                     data={chartData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -63,7 +63,7 @@ function ImpactCharts({ data }) {
                         axisLine={false}
                         tickLine={false}
                     />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
+                    <Tooltip content={<CustomTooltip active={false} payload={[]} label={''} />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
                     <Bar dataKey="Rent" stackId="a" fill="var(--bg-panel)" stroke="var(--border-light)" strokeWidth={1} radius={[0, 0, 4, 4]} />
                     <Bar dataKey="Heating" stackId="a" fill="var(--accent-green)" radius={[4, 4, 0, 0]} />

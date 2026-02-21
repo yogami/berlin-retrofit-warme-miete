@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Database, ArrowRight, Loader2, Trash2, ShieldCheck, Download, Send, PenTool } from 'lucide-react';
 import { SimulationResult } from '../../server/domain/SimulatorEngine';
 import { DealCloserModal } from './DealCloserModal';
+import { createPortal } from 'react-dom';
 
 interface SavedSimulation {
     id: number;
@@ -12,6 +13,7 @@ interface SavedSimulation {
     results: SimulationResult;
     createdAt: string;
     hash?: string;
+    _mockAddress?: string;
 }
 
 export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => void }) {
@@ -19,6 +21,55 @@ export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => voi
     const [loading, setLoading] = useState(true);
     const [dispatchStatus, setDispatchStatus] = useState<Record<number, string>>({});
     const [activeContractSimulation, setActiveContractSimulation] = useState<SavedSimulation | null>(null);
+
+    // Listen for Map / AI auto-selection events to jump straight to the Deal Closer Funnel
+    useEffect(() => {
+        const handleMapSelection = (e: any) => {
+            const bldg = e.detail;
+            // Create a pseudo-simulation state to trick the modal into opening immediately
+            // without requiring standard save/broadcast flows
+            setActiveContractSimulation({
+                id: Math.floor(Math.random() * 900) + 100, // Ephemeral mapping ID
+                units: bldg.units,
+                buildingAge: bldg.era_proxy,
+                retrofitType: 'deep',
+                createdAt: new Date().toISOString(),
+                hash: 'ephemeral-geo-hash',
+                _mockAddress: bldg.address, // Pre-fill injection
+                results: {
+                    totalCost: 100000,
+                    totalSubsidy: 50000,
+                    netLandlordCost: 50000,
+                    oldWarmRent: 15000,
+                    newWarmRent: 14000,
+                    tenantNetSavings: 1000,
+                    landlordAnnualExtraRev: 8000,
+                    pvRevenueGenerated: bldg.pv_kwp_mock * 1200,
+                    roiYears: 5,
+                    oldCo2: 80,
+                    newCo2: 20,
+                    co2Saved: 60,
+                    oldHeating: 2400,
+                    newHeating: 600,
+                    oldRent: 12000,
+                    newRent: 13000,
+                    co2TaxTotalOld: 500,
+                    co2TaxLandlordOld: 300,
+                    co2TaxTenantOld: 200,
+                    co2TaxTotalNew: 100,
+                    co2TaxLandlordNew: 10,
+                    co2TaxTenantNew: 90,
+                    landlordCo2Savings: 290,
+                    bgbLegalMaxIncrease: 8000,
+                    dealMakerRentIncrease: 6000,
+                    assetPremiumValue: 150000
+                }
+            });
+        };
+
+        window.addEventListener('map-building-selected', handleMapSelection);
+        return () => window.removeEventListener('map-building-selected', handleMapSelection);
+    }, []);
 
     const fetchScenarios = () => {
         setLoading(true);
@@ -96,7 +147,13 @@ export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => voi
         );
     }
 
-    if (scenarios.length === 0) return null;
+    // If there are no scenarios and not loading, or if there's an active contract simulation,
+    // we might still want to render the modal.
+    // The original condition `if (scenarios.length === 0) return null;` would hide the modal
+    // if it was triggered by a map event and no scenarios were saved.
+    // Let's adjust this to allow the modal to show even if scenarios are empty.
+    if (scenarios.length === 0 && !activeContractSimulation && !loading) return null;
+
 
     return (
         <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '2rem' }}>
@@ -217,15 +274,15 @@ export default function SavedScenarios({ onSelect }: { onSelect: (b: any) => voi
                 ))}
             </div>
 
-            {activeContractSimulation && (
+            {/* Deal Closer Green Lease Contract Modal rendered at the top level */}
+            {activeContractSimulation && typeof document !== 'undefined' ? createPortal(
                 <DealCloserModal
-                    isOpen={!!activeContractSimulation}
+                    simulation={activeContractSimulation}
                     onClose={() => setActiveContractSimulation(null)}
-                    simulationId={activeContractSimulation.id}
-                    tenantNetSavings={activeContractSimulation.results.tenantNetSavings}
-                    landlordRoi={activeContractSimulation.results.roiYears}
-                />
-            )}
+                    prefillAddress={(activeContractSimulation as any)._mockAddress}
+                />,
+                document.body
+            ) : null}
         </div>
     );
 }

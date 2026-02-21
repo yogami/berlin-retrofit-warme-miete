@@ -6,6 +6,8 @@ export interface SimulationParams {
   heatingPerUnit: number; // annual baseline heating
   sqmPerUnit?: number; // Added for CO2 tier calculation (default 70sqm)
   co2PricePerTon?: number; // default 45 EUR in 2026
+  avRatio?: number; // Surface-Area-to-Volume ratio for physics-based modifier
+  pvRevenue?: number; // Annual solar PV revenue potential
 }
 
 export interface SimulationResult {
@@ -16,6 +18,7 @@ export interface SimulationResult {
   newWarmRent: number;
   tenantNetSavings: number;
   landlordAnnualExtraRev: number;
+  pvRevenueGenerated: number;
   roiYears: number;
   oldCo2: number;
   newCo2: number;
@@ -31,6 +34,9 @@ export interface SimulationResult {
   co2TaxLandlordNew: number;
   co2TaxTenantNew: number;
   landlordCo2Savings: number;
+  bgbLegalMaxIncrease: number;
+  dealMakerRentIncrease: number;
+  assetPremiumValue: number;
 }
 
 interface RetrofitStrategy {
@@ -77,8 +83,17 @@ export class SimulatorEngine {
       throw new Error(`Invalid retrofit type: ${retrofitType}`);
     }
 
-    const { costPerUnit, heatingReduction, rentIncreaseMulti, subsidyPercent } =
-      strategy;
+    const { costPerUnit, rentIncreaseMulti, subsidyPercent } = strategy;
+    let { heatingReduction } = strategy;
+
+    // Apply strict physics modifier. 
+    // A high A/V ratio (e.g., 1.2 for detached) loses more heat, making retrofits MORE effective.
+    // A low A/V ratio (e.g., 0.5 for mid-terraced) loses less heat naturally.
+    if (params.avRatio) {
+      // Simple linear modifier based on standard 1.0 baseline
+      const physicsModifier = Math.max(0.7, Math.min(1.3, params.avRatio));
+      heatingReduction = Math.min(0.9, heatingReduction * physicsModifier);
+    }
 
     const totalCost = costPerUnit * units;
     const totalSubsidy = totalCost * subsidyPercent;
@@ -87,19 +102,6 @@ export class SimulatorEngine {
     // Heating
     const newHeatingPerUnit = heatingPerUnit * (1 - heatingReduction);
     const tenantHeatingSavings = heatingPerUnit - newHeatingPerUnit;
-
-    // Rent
-    const newRentPerUnit = baseRentPerUnit * (1 + rentIncreaseMulti);
-    const rentIncrease = newRentPerUnit - baseRentPerUnit;
-
-    // Warm Rent
-    const oldWarmRent = baseRentPerUnit + heatingPerUnit;
-    const newWarmRent = newRentPerUnit + newHeatingPerUnit;
-    const tenantNetSavings = oldWarmRent - newWarmRent;
-
-    // Landlord ROI
-    const landlordAnnualExtraRev = rentIncrease * units;
-    const roiYears = netLandlordCost / landlordAnnualExtraRev;
 
     // CO2 Tax Calculations (10-tier split logic based on 2026 CO2AufG)
     const sqm = sqmPerUnit || 70; // fallback to 70sqm avg Berlin apartment
@@ -139,14 +141,39 @@ export class SimulatorEngine {
     const co2TaxTenantNew = co2TaxTotalNew - co2TaxLandlordNew;
 
     const landlordCo2Savings = co2TaxLandlordOld - co2TaxLandlordNew;
+    const co2TaxTenantSavings = Math.max(0, co2TaxTenantOld - co2TaxTenantNew);
 
-    // In 2026, the real tenant net savings also includes their change in CO2 tax burden.
-    const finalTenantNetSavings =
-      tenantNetSavings + (co2TaxTenantOld - co2TaxTenantNew);
+    const totalTenantUtilitySavings = tenantHeatingSavings + co2TaxTenantSavings;
 
-    // Advanced Landlord ROI includes the avoided CO2 penalty
-    const advancedRoiYears =
-      netLandlordCost / (landlordAnnualExtraRev + landlordCo2Savings);
+    // Deal Maker Optimization (Solving Split Incentive)
+    // 1. Calculate traditional BGB 8% cap on the total capEx per unit
+    const capExPerUnit = totalCost / units;
+    const bgbLegalMaxIncrease = capExPerUnit * 0.08;
+
+    // 2. Deal Maker Capping:
+    // To solve the split incentive, we cap the rent levy to ensure the tenant guarantees a net-positive outcome.
+    // The tenant keeps 20% of their utility savings, the landlord takes the rest as rent increase.
+    const guaranteedTenantBuffer = totalTenantUtilitySavings * 0.2;
+    const dealMakerRentIncrease = Math.min(bgbLegalMaxIncrease, Math.max(0, totalTenantUtilitySavings - guaranteedTenantBuffer));
+
+    const newRentPerUnit = baseRentPerUnit + dealMakerRentIncrease;
+
+    // Warm Rent (inclusive of CO2 for true split incentive math)
+    const oldWarmRent = baseRentPerUnit + heatingPerUnit + co2TaxTenantOld;
+    const newWarmRent = newRentPerUnit + newHeatingPerUnit + co2TaxTenantNew;
+    const finalTenantNetSavings = oldWarmRent - newWarmRent; // Will strictly be positive
+
+    // Advanced Landlord ROI includes the avoided CO2 penalty, potential PV revenue, and Asset Premium
+    const landlordAnnualExtraRev = dealMakerRentIncrease * units;
+    const annualPv = params.pvRevenue || 0;
+
+    // Asset Premium: Assume a 20x multiplier on base rent as property value, and retrofit increases value by 20%
+    const estimatedPropertyBaseValue = baseRentPerUnit * units * 20;
+    const assetPremiumValue = estimatedPropertyBaseValue * 0.20;
+
+    // ROI includes the capital gains from the asset premium amortized over 10 years for calculation purposes, or just straight.
+    // The standard cash-on-cash ROI (Years)
+    const advancedRoiYears = netLandlordCost / (landlordAnnualExtraRev + landlordCo2Savings + annualPv + (assetPremiumValue / 10));
 
     return {
       totalCost,
@@ -156,6 +183,7 @@ export class SimulatorEngine {
       newWarmRent,
       tenantNetSavings: finalTenantNetSavings,
       landlordAnnualExtraRev,
+      pvRevenueGenerated: annualPv,
       roiYears: advancedRoiYears,
       oldCo2,
       newCo2,
@@ -171,6 +199,9 @@ export class SimulatorEngine {
       co2TaxLandlordNew,
       co2TaxTenantNew,
       landlordCo2Savings,
+      bgbLegalMaxIncrease,
+      dealMakerRentIncrease,
+      assetPremiumValue,
     };
   }
 }

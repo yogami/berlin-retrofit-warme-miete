@@ -26,7 +26,8 @@ export const createApp = (databaseUrl?: string) => {
     // Serve static frontend files in production
     app.use(express.static(path.join(process.cwd(), 'dist')));
 
-    app.get('/(.*)', (req, res) => {
+    // Fallback: Serve React index.html for any frontend route that doesn't start with /api
+    app.use(/^(?!\/api).*/, (req, res) => {
         res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
     });
 

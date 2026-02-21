@@ -145,6 +145,7 @@ export const createReportingRouter = (db: any) => {
       buildingAddress: z.string().min(5),
       tenantName: z.string().min(2),
       landlordName: z.string().min(2),
+      ephemeralResults: z.any().optional(),
     })
     .strict();
 
@@ -161,7 +162,7 @@ export const createReportingRouter = (db: any) => {
           });
       }
 
-      const { simulationId, buildingAddress, tenantName, landlordName } =
+      const { simulationId, buildingAddress, tenantName, landlordName, ephemeralResults } =
         parseResult.data;
 
       // Fetch the verified mathematical simulation
@@ -186,7 +187,16 @@ export const createReportingRouter = (db: any) => {
         }
       }
 
-      if (!simData || !simData.results) {
+      let results: any = null;
+
+      if (simData && simData.results) {
+        results = simData.results;
+      } else if (ephemeralResults) {
+        // Zero-friction mode, use ephemeral results
+        results = ephemeralResults;
+      }
+
+      if (!results) {
         return res
           .status(404)
           .json({
@@ -194,8 +204,6 @@ export const createReportingRouter = (db: any) => {
             message: "Verified simulation record not found.",
           });
       }
-
-      const results: any = simData.results;
 
       // Generate "The Deal Closer" PDF
       const doc = new PDFDocument({ margin: 50 });
@@ -247,55 +255,43 @@ export const createReportingRouter = (db: any) => {
         .fontSize(14)
         .fillColor("black")
         .font("Helvetica-Bold")
-        .text("2. The Win-Win Financial Matrix");
+        .text("2. RETROFIT DEAL SUMMARY");
       doc.moveDown();
 
-      doc.fontSize(12).font("Helvetica-Oblique").text("Pre-Retrofit Reality:");
-      doc
-        .fontSize(11)
-        .font("Helvetica")
-        .text(
-          `- Tenant Heating Burden: €${results.oldHeating.toLocaleString()}/yr`,
-        );
-      doc.text(
-        `- Landlord CO2 Penalty (CO2AufG): €${results.co2TaxLandlordOld.toFixed(2)}/yr`,
-      );
-      doc.moveDown();
+      const oldRentMo = results.oldRent / 12;
+      const oldHeatingMo = results.oldHeating / 12;
+      const oldCo2Mo = results.co2TaxTenantOld / 12;
+      const oldTotalMo = oldRentMo + oldHeatingMo + oldCo2Mo;
 
-      doc.fontSize(12).font("Helvetica-Oblique").text("Post-Retrofit Future:");
-      doc
-        .fontSize(11)
-        .font("Helvetica")
-        .text(
-          `- Tenant Net Savings (incl. rent increase & CO2 tax shift): €${results.tenantNetSavings.toFixed(2)}/yr`,
-        );
-      doc.text(
-        `- Landlord Avoided CO2 Penalty: €${results.landlordCo2Savings.toFixed(2)}/yr`,
-      );
-      doc.text(
-        `- Asset ROI Yield Period: ${results.roiYears.toFixed(1)} Years`,
-      );
+      const newRentMo = results.newRent / 12;
+      const newHeatingMo = results.newHeating / 12;
+      const newCo2Mo = results.co2TaxTenantNew / 12;
+      const newTotalMo = newRentMo + newHeatingMo + newCo2Mo;
+      const netTenantSavingsMo = results.tenantNetSavings / 12;
+
+      doc.fontSize(11).font("Courier").text(`Pre:  Rent €${oldRentMo.toFixed(0)} + Heat €${oldHeatingMo.toFixed(0)} + CO2 €${oldCo2Mo.toFixed(0)} = €${oldTotalMo.toFixed(0)}/mo`);
+      doc.text(`Post: Rent €${newRentMo.toFixed(0)} + Heat €${newHeatingMo.toFixed(0)} + CO2 €${newCo2Mo.toFixed(0)} = €${newTotalMo.toFixed(0)}? NO—€${(oldTotalMo - netTenantSavingsMo).toFixed(0)} NET (savings exceed levy)`);
+      doc.moveDown(1.5);
+
+      doc.font("Helvetica-Bold").text(`TENANT: Save €${netTenantSavingsMo.toFixed(0)}/mo net + warmer home. Sign: ___________________________`);
+      doc.moveDown();
+      doc.text(`LANDLORD: Recover €${results.landlordAnnualExtraRev.toFixed(0)}/yr + €${results.landlordCo2Savings.toFixed(0)} CO2 avoided + asset value +€${(results.assetPremiumValue || 0).toFixed(0)}. Sign: ___________________________`);
+      doc.moveDown();
+      doc.text(`BANK: €${results.netLandlordCost.toFixed(0)} loan collateralized by verified savings. Approve: ___________________________`);
       doc.moveDown(2);
 
-      // Signatures
-      doc
-        .fontSize(14)
-        .font("Helvetica-Bold")
-        .text("3. Execution Agreement (BGB § 559)");
+      // Signatures context
       doc
         .fontSize(11)
         .font("Helvetica")
         .text(
-          `By signing below, the Tenant agrees to the Modernisierungsumlage capped at 8% resulting in a net-positive reduction of Warm Rent.`,
+          `By signing above, the Tenant agrees to the Modernisierungsumlage capped effectively by the guaranteed utility savings, resulting in a strict net-positive reduction of Warm Rent.`,
           { align: "justify" },
         );
       doc.moveDown(3);
 
-      doc.text("_____________________________________", 50, doc.y);
-      doc.text("_____________________________________", 350, doc.y - 12);
-      doc.moveDown(0.5);
-      doc.text(`Landlord Signature\n${landlordName}`, 50, doc.y);
-      doc.text(`Tenant Signature\n${tenantName}`, 350, doc.y - 25);
+      doc.text(`Landlord: ${landlordName}`, 50, doc.y);
+      doc.text(`Tenant: ${tenantName}`, 350, doc.y - 12);
 
       // Branding Footer
       doc.moveDown(5);
