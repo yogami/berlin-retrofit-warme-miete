@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import SimulatorControls from './SimulatorControls';
 import MetricsDisplay from './MetricsDisplay';
 import ImpactCharts from './ImpactCharts';
+import StakeholderIncentives from './StakeholderIncentives';
 import { Building2, Leaf, Zap, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSimulation } from '../hooks/useSimulation';
@@ -65,6 +66,9 @@ function Dashboard() {
                     <SimulatorControls params={params} setParams={setParams} />
                 </div>
             </div>
+
+            {/* Ecosystem Alignment Section */}
+            <StakeholderIncentives />
         </div>
     );
 }
